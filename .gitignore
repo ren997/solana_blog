@@ -10,6 +10,7 @@
 *.log.*
 
 /.vscode/
+/.idea/
 
 node_modules/
 .sass-cache/
@@ -25,3 +26,5 @@ Gemfile.lock
 _site/
 .jekyll-metadata
 .jekyll-cache/
+
+.cursorrules
