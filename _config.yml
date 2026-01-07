@@ -19,8 +19,8 @@
 text_skin: default # "default" (default), "dark", "forest", "ocean", "chocolate", "orange"
 highlight_theme: default # "default" (default), "tomorrow", "tomorrow-night", "tomorrow-night-eighties", "tomorrow-night-blue", "tomorrow-night-bright"
 url: https://ren997.github.io
-baseurl: ""               # 用户主页应为空字符串
-title: ren的博客
+baseurl: "/solana_blog"               # 用户主页应为空字符串
+title: ren的solana博客
 description: > # this means to ignore newlines until "Language & timezone"
   记录一些遇到的问题
 
@@ -55,7 +55,7 @@ author:
 
 ## => GitHub Repository (if the site is hosted by GitHub)
 ##############################
-repository: ren997/ren997.github.io
+repository: ren997/solana_blog
 repository_tree: master
 
 
@@ -169,7 +169,8 @@ search:
 ## => Analytics
 ##############################
 analytics:
-  provider: google
+#  provider: google
+  provider: false
 
   ## Google Analytics
   google:
