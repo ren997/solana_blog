@@ -71,11 +71,130 @@ Solana 网络上的所有数据都存储在账户中。您可以将 Solana 网�
 
 ![程序状态账户]({{ site.baseurl }}/assets/images/sol1/img_4.png)
 
+##### 📖 完整流程解析
+
+上图展示了程序账户和数据账户之间的 owner 关系。为了更好地理解，我们用完整流程图来展示从部署程序到创建状态账户的全过程：
+
+**阶段一：部署程序（一次性操作）**
+
+```
+开发者
+    ↓ 执行: solana program deploy
+BPF Loader（程序加载器）
+    ↓ 创建并设置 owner
+Program Account
+    ├─ Data: Program Code（程序代码）
+    ├─ Executable: True
+    └─ Owner: BPF Loader
+```
+
+**阶段二：创建状态账户（运行时）**
+
+```
+用户
+    ↓ 发送交易：调用 Program 的"初始化"指令
+Solana Runtime
+    ↓ 加载并执行 Program Code
+Your Program 执行
+    ↓ CPI 调用（跨程序调用）
+System Program
+    ↓ 创建新账户：分配地址、空间、lamports
+    ↓ 设置 owner = Your Program
+Data Account
+    ├─ Data: (空的，待初始化)
+    ├─ Executable: False
+    └─ Owner: Your Program
+    ↓
+Your Program 继续执行
+    ↓ 写入初始数据
+Data Account
+    └─ Data: Program State（程序状态）
+```
+
+**关键角色说明**：
+
+- **BPF Loader**：Solana 的程序加载器，负责部署和管理智能合约。它创建 Program Account 并将其标记为可执行（`executable=true`），然后拥有（owner）这个程序账户。
+- **System Program**：Solana 的基础系统程序，负责创建账户、转账、分配空间等基础操作。当程序需要创建数据账户时，会通过 CPI（跨程序调用）请求 System Program 帮忙创建。
+- **Program Account**：存储程序代码的账户，`executable=true` 表示它可以被执行。
+- **Data Account**：存储程序运行时状态的账户，`executable=false` 表示它只是数据容器。
+
+**owner 的含义**：
+
+在 Solana 中，每个账户都有一个 `owner` 字段，表示**哪个程序有权限修改这个账户的数据**。只有 owner 程序才能写入账户的 `data` 字段，这是 Solana 的核心安全机制。
+
+- `Program Account` 的 owner 是 `BPF Loader`：只有 BPF Loader 能修改程序代码（升级/重新部署）
+- `Data Account` 的 owner 是 `Your Program`：只有你的程序能按业务规则修改状态数据
+
+**生活化类比**：
+
+想象你在开一家连锁店：
+- **BPF Loader** = 总部（负责安装收银系统）
+- **Program Account** = 收银系统软件（规则/代码）
+- **Your Program** = 收银系统运行时（执行业务逻辑）
+- **System Program** = 房产局（能创建新房子/账本）
+- **Data Account** = 各分店的账本（存库存、订单、用户积分等）
+
+总部安装好收银系统后，系统运行时需要账本来记录数据，于是请房产局创建账本，并把账本的管理权（owner）设置为"收银系统"，这样只有收银系统能按规则修改账本内容。
+
 #### 系统账户
 
 并非所有账户在由 System Program 创建后都会被分配一个新所有者。由 System Program 拥有的账户称为系统账户。所有钱包账户都是系统账户，这使它们能够支付交易费用。
 
 ![系统账户]({{ site.baseurl }}/assets/images/sol1/img_5.png)
+
+##### 📖 系统账户详解
+
+**什么是系统账户？**
+
+系统账户（System Account）是指 **owner 字段为 System Program** 的账户。最典型的例子就是**所有用户的钱包账户**。
+
+**系统账户的结构示例**：
+
+```
+你的钱包账户 {
+    address: 7xK...abc
+    lamports: 1000000000  (1 SOL = 10亿 lamports)
+    data: []              (空的，只存 SOL，不存其他数据)
+    owner: System Program ◄─── 关键特征！
+    executable: false
+}
+```
+
+**为什么钱包是系统账户？**
+
+- 钱包账户的 **owner 是 System Program**
+- 只有 System Program 能修改你的 SOL 余额（lamports 字段）
+- 这保证了转账安全：只有通过 System Program 的转账指令才能改余额
+- 系统账户可以支付交易费用（因为 System Program 能扣除 lamports）
+
+**系统账户 vs 其他账户的对比**：
+
+| 账户类型 | owner | 用途 | 典型例子 |
+|---------|-------|------|---------|
+| **系统账户** | System Program | 存 SOL、支付交易费 | 所有钱包账户 |
+| **程序账户** | BPF Loader | 存程序代码 | 智能合约 |
+| **数据账户** | 某个 Program | 存程序状态 | NFT 元数据、游戏分数 |
+
+**不要混淆的概念**：
+
+- **System Program**：一个程序（负责转账、创建账户等基础操作）
+- **System Account**：一类账户（由 System Program 拥有的账户，即钱包）
+- **BPF Loader**：另一个程序（负责部署/管理智能合约）
+
+**生活化类比**：
+
+- **System Program** = 银行系统（管理账户余额、转账）
+- **System Account** = 储蓄卡账户（你的钱包，由银行管理）
+- **BPF Loader** = 应用商店（安装/升级 App）
+- **Program Account** = 安装好的 App（智能合约）
+- **Data Account** = App 的数据库文件（存游戏进度、用户设置等）
+
+**为什么需要系统账户？**
+
+系统账户是 Solana 账户体系的基础：
+1. **支付交易费**：只有系统账户能支付交易费（因为只有 System Program 能扣 lamports）
+2. **转账功能**：用户之间转 SOL 就是修改两个系统账户的 lamports 字段
+3. **租金机制**：账户需要保持最低余额以避免被清理（虽然租金机制已弃用，但最低余额要求仍存在）
 
 ## 指令（Instruction）
 
@@ -97,11 +216,167 @@ Solana 网络上的所有数据都存储在账户中。您可以将 Solana 网�
 
 ![指令结构]({{ site.baseurl }}/assets/images/sol1/img_8.png)
 
+##### 📖 Transaction 和 Instruction 的关系说明
+
+**重要概念**：图中的 `Transaction` 不是说"这是交易指令"，而是说明 **Transaction（交易）是装载 Instruction（指令）的容器**。
+
+**层级关系**：
+
+```
+Transaction（交易 = 信封）
+    │
+    ├─ Instruction 1（指令 = 表单1）
+    │   ├─ Program Address: 调用哪个程序
+    │   ├─ Accounts: 涉及哪些账户
+    │   └─ Instruction Data: 具体参数
+    │
+    ├─ Instruction 2（指令 = 表单2）
+    │   ├─ Program Address: ...
+    │   ├─ Accounts: ...
+    │   └─ Instruction Data: ...
+    │
+    └─ ...（可以有多个指令）
+```
+
+**举例：同时转账和铸造 NFT**
+
+```rust
+// 创建一个 Transaction
+let transaction = Transaction {
+    signatures: vec![user_signature],
+    message: Message {
+        instructions: vec![
+            // Instruction 1: 转账
+            Instruction {
+                program_id: system_program::ID,  // System Program
+                accounts: vec![
+                    AccountMeta { pubkey: sender, is_signer: true, is_writable: true },
+                    AccountMeta { pubkey: receiver, is_signer: false, is_writable: true },
+                ],
+                data: vec![/* 转 1 SOL 的指令数据 */],
+            },
+            // Instruction 2: 铸造 NFT
+            Instruction {
+                program_id: nft_program::ID,  // NFT Program
+                accounts: vec![
+                    AccountMeta { pubkey: user, is_signer: true, is_writable: false },
+                    AccountMeta { pubkey: nft_mint, is_signer: false, is_writable: true },
+                ],
+                data: vec![/* NFT 元数据 */],
+            },
+        ],
+    },
+};
+```
+
+**关键点**：
+
+1. **Transaction 是容器**：一次提交可以包含多个操作（指令）
+2. **Instruction 是具体操作**：每个指令告诉 Solana"调用哪个程序、用哪些账户、传什么参数"
+3. **原子性**：Transaction 里的所有 Instruction 要么全部成功，要么全部失败回滚
+4. **顺序执行**：Instruction 按数组顺序依次执行（Instruction 1 → Instruction 2 → ...）
+
+**生活化类比**：
+
+去政府办事大厅：
+- **Transaction** = 你带的文件袋（一次性提交）
+- **Instruction** = 文件袋里的各种表单
+  - 表单1：身份证复印（去 A 窗口 = program_id，需要身份证原件 = accounts，复印份数 = data）
+  - 表单2：税务登记（去 B 窗口，需要营业执照，填写税号）
+
+工作人员会按顺序处理你的所有表单，如果某个表单填错了（某个 Instruction 失败），整个文件袋会被退回（Transaction 失败）。
+
 一个 Instruction 包含以下信息：
 
 - **program_id**：被调用程序的ID。
 - **accounts**：一个账户元数据的数组。
 - **data**：一个包含指令所需额外数据的字节数组。
+
+**🎯 整体逻辑解释：三个字段如何配合工作**
+
+用一个转账例子来理解 Instruction 的完整逻辑：
+
+```rust
+Instruction {
+    // 1️⃣ 告诉 Solana：调用哪个程序
+    program_id: 11111111111111111111111111111111,  // System Program 的地址
+
+    // 2️⃣ 告诉程序：要操作哪些账户
+    accounts: vec![
+        AccountMeta { pubkey: sender, is_signer: true, is_writable: true },    // 转出账户
+        AccountMeta { pubkey: receiver, is_signer: false, is_writable: true }, // 接收账户
+    ],
+
+    // 3️⃣ 告诉程序：具体做什么、参数是什么
+    data: vec![2, 0, 0, 0, 0, 64, 66, 15, 0],
+    //         ↑ 指令类型: 2 = Transfer（转账）
+    //            ↑ 金额: 1000000 lamports (0.001 SOL)
+}
+```
+
+**执行流程**：
+
+```
+用户发送 Instruction
+    ↓
+Solana 读取 program_id
+    ↓ "要调用 System Program"
+找到 System Program 并加载代码
+    ↓
+System Program 读取 accounts
+    ↓ "要操作 sender 和 receiver"
+System Program 读取 data
+    ↓ "执行 Transfer 指令，金额 1000000"
+System Program 执行转账逻辑：
+    • 检查 sender 是否签名 (is_signer=true)
+    • 检查 sender 余额是否足够
+    • sender.lamports -= 1000000
+    • receiver.lamports += 1000000
+    ↓
+转账完成
+```
+
+**生活化类比**：
+
+想象你去银行柜台办理转账：
+
+```
+Instruction = 一张完整的转账申请表
+
+program_id = 柜台号（3号柜台，转账业务）
+            ↓ 你拿着表单去3号柜台
+
+accounts = 涉及的账户
+          • 转出账户：我的账户 6228...1234（需要我签字）
+          • 转入账户：朋友的账户 6228...5678
+            ↓ 柜员知道要操作哪两个账户
+
+data = 具体业务和参数
+      • 业务类型：转账
+      • 转账金额：1000 元
+        ↓ 柜员知道具体要做什么
+
+柜员执行：从我的账户扣1000，加到朋友账户
+```
+
+**三个字段的配合关系**：
+
+| 字段 | 作用 | 类比 |
+|------|------|------|
+| **program_id** | 调用哪个程序（谁来处理） | 去哪个柜台 |
+| **accounts** | 操作哪些账户（涉及谁） | 涉及哪些账户卡 |
+| **data** | 做什么、参数是什么（具体业务） | 转账金额、业务类型 |
+
+**关键点**：
+
+1. **program_id** 决定"谁来执行"（System Program、Token Program、还是你的自定义程序）
+2. **accounts** 列出"涉及的所有账户"，程序会按顺序读取
+3. **data** 是"具体指令和参数"，程序根据 data 判断要执行哪个功能
+4. 三个字段缺一不可：没有 program_id 不知道调用谁，没有 accounts 不知道操作什么，没有 data 不知道做什么
+
+---
+
+**完整 Instruction 结构体**：
 
 ```rust
 pub struct Instruction {
@@ -115,7 +390,6 @@ pub struct Instruction {
     pub data: Vec<u8>,
 }
 ```
-
 #### 程序 ID
 
 指令的 program_id 是包含指令业务逻辑的程序的公钥地址。
