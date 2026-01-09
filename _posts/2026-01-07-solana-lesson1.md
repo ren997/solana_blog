@@ -1,12 +1,13 @@
 ---
-title: Solana 介绍
+title: 第一节-Solana 介绍
 tags: Solana 教程
 ---
 
 <!--more-->
 
-## 概述
+**资料来源：** [OpenBuild - Solana 教程](https://openbuild.xyz/learn/challenges/2086624241/1767500233)
 
+## 概述
 要在 Solana 上进行开发，了解 Solana 开发中独特的几个关键概念至关重要。本节涵盖了您在开始 Solana 开发时需要理解的核心概念，包括账户、交易、程序等内容。
 
 ## 账户（Account）
