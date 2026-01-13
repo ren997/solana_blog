@@ -169,13 +169,12 @@ search:
 ## => Analytics
 ##############################
 analytics:
-#  provider: google
-  provider: false
+  provider: google # 启用 Google Analytics
 
   ## Google Analytics
   google:
-    tracking_id : "G-VNRLC8R9CH"   # 你的GA4测量ID
-    anonymize_ip: true
+    tracking_id : "G-0R2DEGBJ0E"   # Solana博客的GA4测量ID
+    anonymize_ip: false
 
 
 ## => Build
