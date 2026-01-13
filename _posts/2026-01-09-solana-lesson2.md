@@ -3,6 +3,15 @@ title: 第二节-Solana的代币和NFT
 tags: Solana 教程
 ---
 
+## 课程资料
+
+本节主要讲解《Trading Bot的实现原理解析&Solana的代币与NFT》，相关学习资料如下：
+
+- **主要课程**：[Trading Bot的实现原理解析&Solana的代币与NFT](https://openbuild.xyz/learn/challenges/2086624241/1767796891)
+- **Trading Bot 资料**：[Sniper Bot 课程](https://academy.soldevcamp.com/course/sniper-bot/sniper-1/)（主要用于了解）
+- **Solana的代币与NFT**：[代币与NFT课程](https://openbuild.xyz/learn/challenges/2086624241/1766375394)（下面的资料主要基于这一部分）
+- **课程源码**：[hello_solana](https://github.com/lbc-team/hello_solana)
+
 <!--more-->
 
 ## Solana 账户模型
